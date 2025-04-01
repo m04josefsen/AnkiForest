@@ -11,10 +11,20 @@ coin_label = None  # To hold the coin display widget
 # Function to update coins after a review
 def on_review_done(card, ease, _review_state):
     global coins
-    coins += 10
-    print(f"Coins: {coins}") # TODO: remove, for debugging
+
+    if ease == 1:  # Again (Fail)
+        coins += 1
+    elif ease == 2:  # Hard
+        coins += 5
+    elif ease == 3:  # Good
+        coins += 10
+    elif ease == 4:  # Easy
+        coins += 15
+        
+    print(f"Coins: {coins}") # TODO: only for debugging
     update_coin_display()
 
+# Use the correct hook
 reviewer_did_answer_card.append(on_review_done)
 
 # Function to update coin display in the status bar
@@ -57,10 +67,10 @@ def add_shop_button_to_statusbar():
     
     # Add the button to the status bar
     mw.statusBar().addWidget(shop_button)
-    print("Shop button added to the status bar.") # TODO: remove, for debugging
+    print("Shop button added to the status bar.") # TODO: only for debugging
 
 # Run setup
 add_shop_button_to_statusbar()
 update_coin_display()
 
-print("Anki Forest Plugin loaded and ready.") # TODO: remove, for debugging
+print("Anki Forest Plugin loaded and ready.") # TODO: only for debugging
