@@ -1,33 +1,66 @@
 from aqt import mw
 from aqt.utils import QAction, showInfo
 from anki.hooks import addHook
-from anki import hooks 
-from aqt.gui_hooks import reviewer_did_answer_card 
+from aqt.gui_hooks import reviewer_did_answer_card
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 
 # Global variable for coins
 coins = 0
+coin_label = None  # To hold the coin display widget
 
 # Function to update coins after a review
 def on_review_done(card, ease, _review_state):
     global coins
-    coins += 10  # Example: increase coins by 10 per review
-    print(f"Coins: {coins}")
+    coins += 10
+    print(f"Coins: {coins}") # TODO: remove, for debugging
+    update_coin_display()
 
-# Use the correct hook
 reviewer_did_answer_card.append(on_review_done)
+
+# Function to update coin display in the status bar
+def update_coin_display():
+    global coin_label
+    if coin_label:
+        coin_label.setText(f"Coins: {coins}")
+    else:
+        # In case coin_label doesn't exist yet, create it
+        coin_label = QLabel(f"Coins: {coins}")
+        mw.statusBar().addWidget(coin_label)
 
 # Function to open the shop
 def open_shop():
-    showInfo(f"Welcome to the shop! You have {coins} coins.")
-    print(f"Opening shop... Coins: {coins}")
+    # Create the shop window dialog
+    shop_window = QDialog(mw)
+    shop_window.setWindowTitle("Anki Shop")
+    
+    # Layout to organize widgets in the shop window
+    layout = QVBoxLayout()
+    
+    # Display coin balance in the shop
+    coin_label = QLabel(f"You have {coins} coins.")
+    layout.addWidget(coin_label)
+    
+    # Optionally add a button for closing the shop window
+    close_button = QPushButton("Close")
+    close_button.clicked.connect(shop_window.close)
+    layout.addWidget(close_button)
 
-# Add a button to the Tools menu
-def setup_menu():
-    action = QAction("Open Shop", mw)
-    action.triggered.connect(open_shop)
-    mw.form.menuTools.addAction(action)
-    print("Shop button added to the Tools menu.")
+    # Set the layout and show the window
+    shop_window.setLayout(layout)
+    shop_window.exec()
+
+# Function to add a shop button to the status bar
+def add_shop_button_to_statusbar():
+    # Create a button
+    shop_button = QPushButton("Open Shop")
+    shop_button.clicked.connect(open_shop)
+    
+    # Add the button to the status bar
+    mw.statusBar().addWidget(shop_button)
+    print("Shop button added to the status bar.") # TODO: remove, for debugging
 
 # Run setup
-setup_menu()
-print("Anki Forest Plugin loaded and ready.")
+add_shop_button_to_statusbar()
+update_coin_display()
+
+print("Anki Forest Plugin loaded and ready.") # TODO: remove, for debugging
