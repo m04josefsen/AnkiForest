@@ -50,7 +50,7 @@ def open_shop():
     coin_label = QLabel(f"You have {coins} coins.")
     layout.addWidget(coin_label)
     
-    # Optionally add a button for closing the shop window
+    # Button to close shop window
     close_button = QPushButton("Close")
     close_button.clicked.connect(shop_window.close)
     layout.addWidget(close_button)
@@ -69,8 +69,41 @@ def add_shop_button_to_statusbar():
     mw.statusBar().addWidget(shop_button)
     print("Shop button added to the status bar.") # TODO: only for debugging
 
+def open_forest():
+    # Create the shop window dialog
+    forest_window = QDialog(mw)
+    forest_window.setWindowTitle("Forest")
+    
+    # Layout to organize widgets in the forest window
+    layout = QVBoxLayout()
+    
+    # Display coin balance in the forest window
+    coin_label = QLabel(f"You have {coins} coins.")
+    layout.addWidget(coin_label)
+    
+    # Button to close forest window
+    close_button = QPushButton("Close")
+    close_button.clicked.connect(forest_window.close)
+    layout.addWidget(close_button)
+
+    # Set the layout and show the window
+    forest_window.setLayout(layout)
+    forest_window.exec()
+
+# Function to add a forest button to the status bar
+# TODO: kan kanskje bli en metode med shop button, må bare ta inn forest/shop
+def add_forest_button_to_statusbar():
+    # Create a button
+    forest_button = QPushButton("Open Forest")
+    forest_button.clicked.connect(open_forest)
+
+    # Add the button to the status bar
+    mw.statusBar().addWidget(forest_button)
+    print("Forest button added to the status bar.") #TODO: only for debugging
+
 # Run setup
 add_shop_button_to_statusbar()
+add_forest_button_to_statusbar()
 update_coin_display()
 
 print("Anki Forest Plugin loaded and ready.") # TODO: only for debugging
