@@ -4,6 +4,7 @@ from anki.hooks import addHook
 from aqt.gui_hooks import reviewer_did_answer_card
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
 
 import datetime
 
@@ -25,6 +26,16 @@ owned_trees = []
 # Global variable for coins
 coins = 0
 coin_label = None  # To hold the coin display widget
+page_index = 0
+forest_window = None
+
+"""
+0 = this week
+1 = this month
+2 = this year
+3 = all time
+TODO: previous month, years etc...
+"""
 
 # Function to update coins after a review
 def on_review_done(card, ease, _review_state):
@@ -120,37 +131,16 @@ def add_shop_button_to_statusbar():
     print("Shop button added to the status bar.") # TODO: only for debugging
 
 def open_forest():
+    global forest_window
     # Create the forest window dialog
     forest_window = QDialog(mw)
     forest_window.setWindowTitle("Forest")
-    
+
     # Layout to organize widgets in the forest window
     layout = QVBoxLayout()
-    
-    """
-    # Display coin balance
-    coin_label = QLabel(f"You have {coins} coins.")
-    layout.addWidget(coin_label)"
-    """
 
-    # Display owned trees with their images
-    # TODO: Nå må denne endres
-    for tree in owned_trees:
-        tree_label = QLabel(tree.tree.name)
-        pixmap = QPixmap(tree.tree.asset)  # Load image from asset path
-        if not pixmap.isNull():  # Check if the image is valid
-            tree_image_label = QLabel()
-            tree_image_label.setPixmap(pixmap.scaled(150, 150))  # Scale the image to fit
-            layout.addWidget(tree_image_label)  # Add the image label to layout
-            layout.addWidget(tree_label)  # Add the tree name label under the image
-        
-        # TODO: for debugging
-        print(tree)
-
-    # If no trees are owned, display a message
-    if not owned_trees:
-        no_trees_label = QLabel("You don't own any trees yet.")
-        layout.addWidget(no_trees_label)
+    # Pass the layout to the update function
+    update_forest_display(layout)  # Populate the layout with trees and navigation
 
     # Button to close the forest window
     close_button = QPushButton("Close")
@@ -171,6 +161,85 @@ def add_forest_button_to_statusbar():
     # Add the button to the status bar
     mw.statusBar().addWidget(forest_button)
     print("Forest button added to the status bar.") #TODO: only for debugging
+    
+def update_forest_display(layout):
+    global page_index
+    
+    # Clear the existing layout (optional, depends on implementation)
+    for i in reversed(range(layout.count())):
+        widget = layout.itemAt(i).widget()
+        if widget:
+            widget.deleteLater()
+
+    
+    period_label = QLabel(f"You are on page {page_index}.") # TODO: her må page endres til mpnde uke osv.
+    layout.addWidget(period_label)
+
+    # Get trees based on the page_index
+    trees_for_period = get_trees_for_period(page_index)
+
+    # Update layout with trees for the current period
+    for tree in trees_for_period:
+        tree_label = QLabel(tree.tree.name)
+        pixmap = QPixmap(tree.tree.asset).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio)
+        tree_image_label = QLabel()
+        tree_image_label.setPixmap(pixmap)
+        layout.addWidget(tree_image_label)  # Add the image label to layout
+        layout.addWidget(tree_label)  # Add the tree name label under the image
+    
+    # Add navigation buttons
+    nav_layout = QHBoxLayout()
+    prev_button = QPushButton("Previous")
+    next_button = QPushButton("Next")
+    prev_button.clicked.connect(prev_page)
+    next_button.clicked.connect(next_page)
+
+    nav_layout.addWidget(prev_button)
+    nav_layout.addWidget(next_button)
+
+    layout.addLayout(nav_layout)
+
+
+# Function to go to next page in the forest window
+def next_page():
+    global page_index
+    if page_index < 3:
+        page_index += 1
+    # Loops back if on last page
+    else:
+        page_index = 0
+    
+    # Fetch the layout of the forest window and pass it to update_forest_display
+    layout = forest_window.layout()  # Access layout from the forest window
+    update_forest_display(layout)
+
+# Function to go to the previous page in the forest window
+# TODO: går ikke til 3 hvis på 0?
+def prev_page():
+    global page_index
+    if page_index > 0:
+        page_index -= 0
+    # Loops to the back if on first page
+    else:
+        page_index = 3
+
+    # Fetch the layout of the forest window and pass it to update_forest_display
+    layout = forest_window.layout()  # Access layout from the forest window
+    update_forest_display(layout)
+
+def get_trees_for_period(page_index):
+    now = datetime.datetime.now()
+    
+    if page_index == 0:  # This week
+        start_date = now - datetime.timedelta(days=now.weekday())  # Mandag denne uka
+    elif page_index == 1:  # This month
+        start_date = now.replace(day=1)  # Første dag i måneden
+    elif page_index == 2:  # This year
+        start_date = now.replace(month=1, day=1)  # Første januar
+    else:  # All time
+        return owned_trees  # Returnerer alle trær uten filtrering
+
+    return [tree for tree in owned_trees if tree.purchase_date >= start_date]
 
 # Run setup
 add_shop_button_to_statusbar()
