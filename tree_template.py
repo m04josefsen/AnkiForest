@@ -1,4 +1,4 @@
-class Tree:
+class TreeTemplate:
     def __init__(self, name, price, asset):
         self.name = name
         self.price = price

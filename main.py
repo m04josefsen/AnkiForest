@@ -5,16 +5,19 @@ from aqt.gui_hooks import reviewer_did_answer_card
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QPixmap
 
+import datetime
+
 # TODO: Example trees, would need to change to be able to track, maybe everyone needs their own class
-from .tree import Tree
+from .tree_template import TreeTemplate
+from .owned_tree import OwnedTree
 import os
 
 BASE_DIR = os.path.dirname(__file__)  # Finds main.py
 
 trees = [
-    Tree("Oak", 0, os.path.join(BASE_DIR, "assets/img/oak.webp")),
-    Tree("Pine", 150, os.path.join(BASE_DIR, "assets/img/pine.webp")),
-    Tree("Cherry Blossom", 200, os.path.join(BASE_DIR, "assets/img/cherry.webp")),
+    TreeTemplate("Oak", 0, os.path.join(BASE_DIR, "assets/img/oak.webp")),
+    TreeTemplate("Pine", 150, os.path.join(BASE_DIR, "assets/img/pine.webp")),
+    TreeTemplate("Cherry Blossom", 200, os.path.join(BASE_DIR, "assets/img/cherry.webp")),
 ]
 
 owned_trees = []
@@ -99,7 +102,8 @@ def buy_tree(tree):
     if coins >= tree.price:
         coins -= tree.price
         # TODO: denner er dårlig, kanskje bruke dictionary med count, JA, og if 0 så vises den ikke
-        owned_trees.append(tree)
+        owned_tree = OwnedTree(tree, datetime.datetime.now())
+        owned_trees.append(owned_tree)
         print(f"Bought {tree.name}! Remaining coins: {coins}")
         update_coin_display()
     else:
@@ -123,19 +127,25 @@ def open_forest():
     # Layout to organize widgets in the forest window
     layout = QVBoxLayout()
     
+    """
     # Display coin balance
     coin_label = QLabel(f"You have {coins} coins.")
-    layout.addWidget(coin_label)
+    layout.addWidget(coin_label)"
+    """
 
     # Display owned trees with their images
+    # TODO: Nå må denne endres
     for tree in owned_trees:
-        tree_label = QLabel(tree.name)
-        pixmap = QPixmap(tree.asset)  # Load image from asset path
+        tree_label = QLabel(tree.tree.name)
+        pixmap = QPixmap(tree.tree.asset)  # Load image from asset path
         if not pixmap.isNull():  # Check if the image is valid
             tree_image_label = QLabel()
             tree_image_label.setPixmap(pixmap.scaled(150, 150))  # Scale the image to fit
             layout.addWidget(tree_image_label)  # Add the image label to layout
             layout.addWidget(tree_label)  # Add the tree name label under the image
+        
+        # TODO: for debugging
+        print(tree)
 
     # If no trees are owned, display a message
     if not owned_trees:
