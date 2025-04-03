@@ -165,14 +165,22 @@ def add_forest_button_to_statusbar():
 def update_forest_display(layout):
     global page_index
     
-    # Clear the existing layout (optional, depends on implementation)
+    # Clear the existing layout
     for i in reversed(range(layout.count())):
         widget = layout.itemAt(i).widget()
         if widget:
             widget.deleteLater()
-
     
-    period_label = QLabel(f"You are on page {page_index}.") # TODO: her må page endres til mpnde uke osv.
+    # Adds label depending on page
+    if page_index == 0:
+        period_label = QLabel("This week")
+    elif page_index == 1:
+        period_label = QLabel("This month") 
+    elif page_index == 2:
+        period_label = QLabel("This year")
+    else:
+        period_label = QLabel("All time")
+        
     layout.addWidget(period_label)
 
     # Get trees based on the page_index
@@ -231,13 +239,13 @@ def get_trees_for_period(page_index):
     now = datetime.datetime.now()
     
     if page_index == 0:  # This week
-        start_date = now - datetime.timedelta(days=now.weekday())  # Mandag denne uka
+        start_date = now - datetime.timedelta(days=now.weekday())  # Monday this week
     elif page_index == 1:  # This month
-        start_date = now.replace(day=1)  # Første dag i måneden
+        start_date = now.replace(day=1)  # First of this month
     elif page_index == 2:  # This year
-        start_date = now.replace(month=1, day=1)  # Første januar
+        start_date = now.replace(month=1, day=1)  # First of January
     else:  # All time
-        return owned_trees  # Returnerer alle trær uten filtrering
+        return owned_trees
 
     return [tree for tree in owned_trees if tree.purchase_date >= start_date]
 
