@@ -2,10 +2,12 @@ from aqt import mw
 from aqt.utils import QAction, showInfo
 from anki.hooks import addHook
 from aqt.gui_hooks import reviewer_did_answer_card
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QWidget, QGridLayout
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QWidget, QGridLayout, QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
+from PyQt6.QtGui import QPixmap, QPainter, QTransform
 from PyQt6.QtCore import Qt
 
+
+import random
 import datetime
 
 # TODO: Example trees, would need to change to be able to track, maybe everyone needs their own class
@@ -184,7 +186,6 @@ def add_forest_button_to_statusbar():
     mw.statusBar().addWidget(forest_button)
     print("Forest button added to the status bar.") #TODO: only for debugging
     
-
 def update_forest_display(layout):
     global page_index
 
@@ -194,7 +195,6 @@ def update_forest_display(layout):
         if item.widget():
             item.widget().deleteLater()
         elif item.layout():
-            # Recursively clear inner layouts
             inner_layout = item.layout()
             for j in reversed(range(inner_layout.count())):
                 inner_item = inner_layout.itemAt(j)
@@ -202,7 +202,6 @@ def update_forest_display(layout):
                     inner_item.widget().deleteLater()
             layout.removeItem(inner_layout)
 
-    # Adds label depending on page
     if page_index == 0:
         period_label = QLabel("This week")
     elif page_index == 1:
@@ -211,59 +210,97 @@ def update_forest_display(layout):
         period_label = QLabel("This year")
     else:
         period_label = QLabel("All time")
-
     layout.addWidget(period_label)
 
-    # Get trees based on the page_index
     trees_for_period = get_trees_for_period(page_index)
+    random.shuffle(trees_for_period)
 
-    # Create a grid layout to arrange trees in rows and columns
-    grid_layout = QGridLayout()
-    max_columns = 3  # Number of trees per row
-    row = 0
-    col = 0
+    # Set up isometric scene
+    scene = QGraphicsScene()
+    view = QGraphicsView(scene)
+    view.setRenderHint(QPainter.RenderHint.Antialiasing)
+    view.setFixedSize(window_width - 20, window_height - 150)
+    scene.setSceneRect(0, 0, window_width - 20, window_height - 150)
+
+    # Set up background image (grass field) and apply isometric rotation
+    background = QPixmap(os.path.join(BASE_DIR, "assets/img/temptile.jpg"))
+    transform = QTransform()
+    transform.rotate(45)  # Rotate the background 45 degrees (isometric angle)
+    rotated_background = background.transformed(transform)
+    rotated_background = rotated_background.scaled(view.width(), view.height())
+    background_item = QGraphicsPixmapItem(rotated_background)
+    background_item.setZValue(-1)  # Ensure background stays at the back
+    scene.addItem(background_item)
+
+    # Define isometric grid
+    grid_width = 6   # columns
+    grid_height = 4  # rows
+    tile_width = 60
+    tile_height = 30
+
+    BASE_SCALE = 0.2
+    used_positions = set()
+    max_attempts = 100
 
     for tree in trees_for_period:
-        tree_container = QVBoxLayout()
+        pixmap = QPixmap(tree.tree.asset)
 
-        tree_image_label = QLabel()
-        pixmap = QPixmap(tree.tree.asset).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio)
-        tree_image_label.setPixmap(pixmap)
-        tree_container.addWidget(tree_image_label)
+        attempts = 0
+        while attempts < max_attempts:
+            grid_x = random.randint(0, grid_width - 1)
+            grid_y = random.randint(0, grid_height - 1)
+            if (grid_x, grid_y) in used_positions:
+                attempts += 1
+                continue
 
-        tree_label = QLabel(tree.tree.name)
-        tree_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        tree_container.addWidget(tree_label)
+            iso_x = (grid_x - grid_y) * tile_width + view.width() // 2
+            iso_y = (grid_x + grid_y) * tile_height // 2 + 60
 
-        # Wrapper widget to hold the container
-        wrapper = QWidget()
-        wrapper.setLayout(tree_container)
-        grid_layout.addWidget(wrapper, row, col)
+            # Check if within diamond bounds
+            center_x = view.width() // 2
+            center_y = view.height() // 2
+            dx = abs(iso_x - center_x)
+            dy = abs(iso_y - center_y)
+            diamond_width = grid_width * tile_width
+            diamond_height = grid_height * tile_height
 
-        col += 1
-        if col >= max_columns:
-            col = 0
-            row += 1
+            if (dx / (diamond_width / 2) + dy / (diamond_height / 2)) <= 1:
+                used_positions.add((grid_x, grid_y))
+                break
+            attempts += 1
 
-    layout.addLayout(grid_layout)
+        # Scale based on depth
+        depth_factor = 1.0 - (grid_y * 0.05)
+        scale_factor = BASE_SCALE * depth_factor
+        scaled_pixmap = pixmap.scaled(
+            pixmap.width() * scale_factor,
+            pixmap.height() * scale_factor,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
 
-    # Add navigation buttons
+        item = QGraphicsPixmapItem(scaled_pixmap)
+        item.setOffset(-scaled_pixmap.width() / 2, -scaled_pixmap.height())
+        item.setPos(iso_x, iso_y)
+        item.setZValue(iso_y)
+        scene.addItem(item)
+
+    layout.addWidget(view)
+
+    # Navigation
     nav_layout = QHBoxLayout()
     prev_button = QPushButton("Previous")
     next_button = QPushButton("Next")
     prev_button.clicked.connect(prev_page)
     next_button.clicked.connect(next_page)
-
     nav_layout.addWidget(prev_button)
     nav_layout.addWidget(next_button)
-
     layout.addLayout(nav_layout)
-
 
 # Function to go to next page in the forest window
 def next_page():
     global page_index
-    if page_index < 43:
+    if page_index < 3:
         page_index += 1
     # Loops back if on last page
     else:
@@ -274,14 +311,13 @@ def next_page():
     update_forest_display(layout)
 
 # Function to go to the previous page in the forest window
-# TODO: går ikke til 3 hvis på 0?
 def prev_page():
     global page_index
     if page_index > 0:
-        page_index -= 0
+        page_index -= 1
     # Loops to the back if on first page
     else:
-        page_index = 3
+        page_index = 2
 
     # Fetch the layout of the forest window and pass it to update_forest_display
     layout = forest_window.layout()  # Access layout from the forest window
