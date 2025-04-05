@@ -21,13 +21,27 @@ trees = [
     TreeTemplate("Cherry Blossom", 200, os.path.join(BASE_DIR, "assets/img/cherry.webp")),
 ]
 
-owned_trees = []
+owned_trees = [
+    OwnedTree(trees[0], datetime.datetime.now()), 
+    OwnedTree(trees[1], datetime.datetime.now()), 
+    OwnedTree(trees[2], datetime.datetime.now() - datetime.timedelta(weeks=2)),  
+    OwnedTree(trees[0], datetime.datetime.now() - datetime.timedelta(weeks=4)), 
+    OwnedTree(trees[1], datetime.datetime.now() - datetime.timedelta(days=50)), 
+    OwnedTree(trees[2], datetime.datetime.now() - datetime.timedelta(days=100)), 
+    OwnedTree(trees[0], datetime.datetime.now() - datetime.timedelta(days=200)), 
+    OwnedTree(trees[1], datetime.datetime.now() - datetime.timedelta(days=365)), 
+    OwnedTree(trees[2], datetime.datetime.now() - datetime.timedelta(days=400)),
+    OwnedTree(trees[0], datetime.datetime.now() - datetime.timedelta(days=500)), 
+]
 
 # Global variable for coins
 coins = 0
 coin_label = None  # To hold the coin display widget
 page_index = 0
 forest_window = None
+window_height = 600
+window_width = 600
+
 
 """
 0 = this week
@@ -68,9 +82,13 @@ def update_coin_display():
 
 # Function to open the shop
 def open_shop():
+    global window_width
+    global window_height
+
     # Create the shop window dialog
     shop_window = QDialog(mw)
     shop_window.setWindowTitle("Shop")
+    shop_window.setFixedSize(window_width, window_height)
     
     # Layout to organize widgets in the shop window
     layout = QVBoxLayout()
@@ -132,9 +150,13 @@ def add_shop_button_to_statusbar():
 
 def open_forest():
     global forest_window
+    global window_height
+    global window_width
+
     # Create the forest window dialog
     forest_window = QDialog(mw)
     forest_window.setWindowTitle("Forest")
+    forest_window.setFixedSize(window_width, window_height)
 
     # Layout to organize widgets in the forest window
     layout = QVBoxLayout()
@@ -211,7 +233,7 @@ def update_forest_display(layout):
 # Function to go to next page in the forest window
 def next_page():
     global page_index
-    if page_index < 3:
+    if page_index < 43:
         page_index += 1
     # Loops back if on last page
     else:
