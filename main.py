@@ -2,7 +2,7 @@ from aqt import mw
 from aqt.utils import QAction, showInfo
 from anki.hooks import addHook
 from aqt.gui_hooks import reviewer_did_answer_card
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QHBoxLayout, QWidget, QGridLayout
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
@@ -184,15 +184,24 @@ def add_forest_button_to_statusbar():
     mw.statusBar().addWidget(forest_button)
     print("Forest button added to the status bar.") #TODO: only for debugging
     
+
 def update_forest_display(layout):
     global page_index
-    
+
     # Clear the existing layout
     for i in reversed(range(layout.count())):
-        widget = layout.itemAt(i).widget()
-        if widget:
-            widget.deleteLater()
-    
+        item = layout.itemAt(i)
+        if item.widget():
+            item.widget().deleteLater()
+        elif item.layout():
+            # Recursively clear inner layouts
+            inner_layout = item.layout()
+            for j in reversed(range(inner_layout.count())):
+                inner_item = inner_layout.itemAt(j)
+                if inner_item.widget():
+                    inner_item.widget().deleteLater()
+            layout.removeItem(inner_layout)
+
     # Adds label depending on page
     if page_index == 0:
         period_label = QLabel("This week")
@@ -202,21 +211,42 @@ def update_forest_display(layout):
         period_label = QLabel("This year")
     else:
         period_label = QLabel("All time")
-        
+
     layout.addWidget(period_label)
 
     # Get trees based on the page_index
     trees_for_period = get_trees_for_period(page_index)
 
-    # Update layout with trees for the current period
+    # Create a grid layout to arrange trees in rows and columns
+    grid_layout = QGridLayout()
+    max_columns = 3  # Number of trees per row
+    row = 0
+    col = 0
+
     for tree in trees_for_period:
-        tree_label = QLabel(tree.tree.name)
-        pixmap = QPixmap(tree.tree.asset).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio)
+        tree_container = QVBoxLayout()
+
         tree_image_label = QLabel()
+        pixmap = QPixmap(tree.tree.asset).scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio)
         tree_image_label.setPixmap(pixmap)
-        layout.addWidget(tree_image_label)  # Add the image label to layout
-        layout.addWidget(tree_label)  # Add the tree name label under the image
-    
+        tree_container.addWidget(tree_image_label)
+
+        tree_label = QLabel(tree.tree.name)
+        tree_label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        tree_container.addWidget(tree_label)
+
+        # Wrapper widget to hold the container
+        wrapper = QWidget()
+        wrapper.setLayout(tree_container)
+        grid_layout.addWidget(wrapper, row, col)
+
+        col += 1
+        if col >= max_columns:
+            col = 0
+            row += 1
+
+    layout.addLayout(grid_layout)
+
     # Add navigation buttons
     nav_layout = QHBoxLayout()
     prev_button = QPushButton("Previous")
