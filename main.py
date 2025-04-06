@@ -5,7 +5,7 @@ from aqt.gui_hooks import reviewer_did_answer_card
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLabel, QPushButton,
     QHBoxLayout, QWidget, QGridLayout,
-    QGraphicsScene, QGraphicsView, QGraphicsPixmapItem
+    QGraphicsScene, QGraphicsView, QGraphicsPixmapItem, QScrollArea
 )
 from PyQt6.QtGui import QPixmap, QPainter, QTransform
 from PyQt6.QtCore import Qt
@@ -25,11 +25,27 @@ SAVE_FILE = os.path.join(BASE_DIR, "user_data.json")
 from .tree_template import TreeTemplate
 from .owned_tree import OwnedTree
 
-# Example tree templates
+# Example tree templates with color
 trees = [
-    TreeTemplate("Oak", 0, os.path.join(BASE_DIR, "assets/img/oak.webp")),
-    TreeTemplate("Pine", 150, os.path.join(BASE_DIR, "assets/img/pine.webp")),
-    TreeTemplate("Cherry Blossom", 200, os.path.join(BASE_DIR, "assets/img/cherry.webp")),
+    TreeTemplate("Tree1", 0, os.path.join(BASE_DIR, "assets/img/tree1_green.png"), "Green"),
+    TreeTemplate("Tree1", 0, os.path.join(BASE_DIR, "assets/img/tree1_sandy.png"), "Sandy"),
+    TreeTemplate("Tree1", 0, os.path.join(BASE_DIR, "assets/img/tree1_teal.png"), "Teal"),
+    TreeTemplate("Tree1", 0, os.path.join(BASE_DIR, "assets/img/tree1_yellow.png"), "Yellow"),
+
+    TreeTemplate("Tree2", 0, os.path.join(BASE_DIR, "assets/img/tree2_green.png"), "Green"),
+    TreeTemplate("Tree2", 0, os.path.join(BASE_DIR, "assets/img/tree2_sandy.png"), "Sandy"),
+    TreeTemplate("Tree2", 0, os.path.join(BASE_DIR, "assets/img/tree2_teal.png"), "Teal"),
+    TreeTemplate("Tree2", 0, os.path.join(BASE_DIR, "assets/img/tree2_yellow.png"), "Yellow"),
+
+    TreeTemplate("Tree3", 0, os.path.join(BASE_DIR, "assets/img/tree3_green.png"), "Green"),
+    TreeTemplate("Tree3", 0, os.path.join(BASE_DIR, "assets/img/tree3_sandy.png"), "Sandy"),
+    TreeTemplate("Tree3", 0, os.path.join(BASE_DIR, "assets/img/tree3_teal.png"), "Teal"),
+    TreeTemplate("Tree3", 0, os.path.join(BASE_DIR, "assets/img/tree3_yellow.png"), "Yellow"),
+
+    TreeTemplate("Tree4", 0, os.path.join(BASE_DIR, "assets/img/tree4_green.png"), "Green"),
+    TreeTemplate("Tree4", 0, os.path.join(BASE_DIR, "assets/img/tree4_sandy.png"), "Sandy"),
+    TreeTemplate("Tree4", 0, os.path.join(BASE_DIR, "assets/img/tree4_teal.png"), "Teal"),
+    TreeTemplate("Tree4", 0, os.path.join(BASE_DIR, "assets/img/tree4_yellow.png"), "Yellow"),
 ]
 
 owned_trees = []  # Will be loaded from file
@@ -81,13 +97,13 @@ def load_data():
 def on_review_done(card, ease, _review_state):
     global coins
 
-    if ease == 1:
+    if ease == 1: # Again
         coins += 1
-    elif ease == 2:
+    elif ease == 2: # Hard
         coins += 5
-    elif ease == 3:
+    elif ease == 3: # Good
         coins += 10
-    elif ease == 4:
+    elif ease == 4: # Easy
         coins += 15
 
     print(f"Coins: {coins}")  # Debug only
@@ -117,24 +133,70 @@ def open_shop():
     shop_window = QDialog(mw)
     shop_window.setWindowTitle("Shop")
     shop_window.setFixedSize(window_width, window_height)
+
+    # Layout for the shop window
     layout = QVBoxLayout()
 
+    # Create a scroll area for the list of trees
+    scroll_area = QScrollArea()
+    scroll_area.setWidgetResizable(True)
+
+    # Create a widget inside the scroll area to hold the tree items
+    scroll_widget = QWidget()
+    scroll_layout = QVBoxLayout()
+
+    # Group trees by type
+    tree_groups = {}
     for tree in trees:
-        tree_layout = QHBoxLayout()
+        if tree.name not in tree_groups:
+            tree_groups[tree.name] = []
+        tree_groups[tree.name].append(tree)
 
-        image_label = QLabel()
-        pixmap = QPixmap(tree.asset).scaled(50, 50)
-        image_label.setPixmap(pixmap)
-        tree_layout.addWidget(image_label)
+    # Use a grid layout to place trees in rows (with 4 items per row)
+    grid_layout = QGridLayout()
 
-        info_label = QLabel(f"{tree.name} - {tree.price} coins")
-        tree_layout.addWidget(info_label)
+    # Track the row and column to place trees
+    row, col = 0, 0
+    max_columns = 4  # 4 items per row
 
-        buy_button = QPushButton("Buy")
-        buy_button.clicked.connect(lambda _, t=tree: buy_tree(t))
-        tree_layout.addWidget(buy_button)
+    # Set the width of each column to ensure all trees fit within the window width
+    col_width = window_width // max_columns
+    row_height = 150  # Height of each row
 
-        layout.addLayout(tree_layout)
+    for tree_type, grouped_trees in tree_groups.items():
+        # For each tree, create a row with the tree's information and image
+        for tree in grouped_trees:
+            # Create individual layout for each tree
+            row_layout = QVBoxLayout()
+
+            # Display tree image with scaled size to avoid large images
+            image_label = QLabel()
+            pixmap = QPixmap(tree.asset).scaled(80, 80)  # Fixed size for each tree image
+            image_label.setPixmap(pixmap)
+            row_layout.addWidget(image_label)
+
+            # Label for tree name and color
+            info_label = QLabel(f"{tree_type} ({tree.color}) - {tree.price} coins")
+            row_layout.addWidget(info_label)
+
+            # Button to buy tree
+            buy_button = QPushButton("Buy")
+            buy_button.clicked.connect(lambda _, t=tree: buy_tree(t))
+            row_layout.addWidget(buy_button)
+
+            # Add the tree layout to the grid layout
+            grid_layout.addLayout(row_layout, row, col)
+
+            # Move to the next column
+            col += 1
+            if col >= max_columns:
+                col = 0
+                row += 1
+
+    scroll_widget.setLayout(grid_layout)
+    scroll_area.setWidget(scroll_widget)
+
+    layout.addWidget(scroll_area)
 
     close_button = QPushButton("Close")
     close_button.clicked.connect(shop_window.close)
@@ -142,7 +204,6 @@ def open_shop():
 
     shop_window.setLayout(layout)
     shop_window.exec()
-
 
 def buy_tree(tree):
     global coins, owned_trees
@@ -213,7 +274,7 @@ def update_forest_display(layout):
     view.setFixedSize(window_width - 20, window_height - 150)
     scene.setSceneRect(0, 0, window_width - 20, window_height - 150)
 
-    background = QPixmap(os.path.join(BASE_DIR, "assets/img/temptile.jpg"))
+    background = QPixmap(os.path.join(BASE_DIR, "assets/img/tempgrass.png"))
     transform = QTransform()
     transform.rotate(45)
     rotated_background = background.transformed(transform).scaled(view.width(), view.height())
@@ -223,7 +284,7 @@ def update_forest_display(layout):
 
     grid_width, grid_height = 6, 4
     tile_width, tile_height = 60, 30
-    BASE_SCALE = 0.2
+    BASE_SCALE = 0.5
     used_positions = set()
     max_attempts = 100
 
