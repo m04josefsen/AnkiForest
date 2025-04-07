@@ -74,7 +74,6 @@ def save_data():
     with open(SAVE_FILE, "w") as f:
         json.dump(data, f)
 
-
 def load_data():
     global coins, owned_trees
     try:
@@ -216,7 +215,6 @@ def buy_tree(tree):
     else:
         print("Not enough coins!")
 
-
 def add_shop_button_to_statusbar():
     shop_button = QPushButton("Open Shop")
     shop_button.clicked.connect(open_shop)
@@ -240,13 +238,11 @@ def open_forest():
     forest_window.setLayout(layout)
     forest_window.exec()
 
-
 def add_forest_button_to_statusbar():
     forest_button = QPushButton("Open Forest")
     forest_button.clicked.connect(open_forest)
     mw.statusBar().addWidget(forest_button)
     print("Forest button added to the status bar.")
-
 
 def update_forest_display(layout):
     global page_index
@@ -282,11 +278,15 @@ def update_forest_display(layout):
     background_item.setZValue(-1)
     scene.addItem(background_item)
 
-    grid_width, grid_height = 6, 4
+    grid_width, grid_height = 6, 10
     tile_width, tile_height = 60, 30
     BASE_SCALE = 0.5
     used_positions = set()
     max_attempts = 100
+    MARGIN = 30
+
+    offset_x = view.width() // 2
+    offset_y = 40  
 
     for tree in trees_for_period:
         pixmap = QPixmap(tree.tree.asset)
@@ -298,23 +298,21 @@ def update_forest_display(layout):
                 attempts += 1
                 continue
 
-            iso_x = (grid_x - grid_y) * tile_width + view.width() // 2
-            iso_y = (grid_x + grid_y) * tile_height // 2 + 60
+            iso_x = (grid_x - grid_y) * tile_width + offset_x
+            iso_y = (grid_x + grid_y) * tile_height // 2 + offset_y
 
-            center_x = view.width() // 2
-            center_y = view.height() // 2
-            dx = abs(iso_x - center_x)
-            dy = abs(iso_y - center_y)
-            diamond_width = grid_width * tile_width
-            diamond_height = grid_height * tile_height
+            depth_factor = 1.0 - (grid_y * 0.05)
+            scale_factor = BASE_SCALE * depth_factor
+            scaled_height = pixmap.height() * scale_factor
 
-            if (dx / (diamond_width / 2) + dy / (diamond_height / 2)) <= 1:
+            if (
+                MARGIN <= iso_x <= view.width() - MARGIN and
+                MARGIN + scaled_height <= iso_y <= view.height() - MARGIN
+            ):
                 used_positions.add((grid_x, grid_y))
                 break
             attempts += 1
 
-        depth_factor = 1.0 - (grid_y * 0.05)
-        scale_factor = BASE_SCALE * depth_factor
         scaled_pixmap = pixmap.scaled(
             pixmap.width() * scale_factor,
             pixmap.height() * scale_factor,
@@ -339,28 +337,25 @@ def update_forest_display(layout):
     nav_layout.addWidget(next_button)
     layout.addLayout(nav_layout)
 
-
 def next_page():
     global page_index
     page_index = (page_index + 1) % 4
     update_forest_display(forest_window.layout())
-
 
 def prev_page():
     global page_index
     page_index = (page_index - 1) % 4
     update_forest_display(forest_window.layout())
 
-
 def get_trees_for_period(index):
     now = datetime.datetime.now()
-    if index == 0:
-        start = now - datetime.timedelta(days=now.weekday())
-    elif index == 1:
+    if index == 0: # This week
+        start = (now - datetime.timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    elif index == 1: # This month
         start = now.replace(day=1)
-    elif index == 2:
+    elif index == 2: # This year
         start = now.replace(month=1, day=1)
-    else:
+    else: # All time
         return owned_trees
     return [t for t in owned_trees if t.purchase_date >= start]
 
